@@ -12,12 +12,13 @@ concurrency:
     cancel-in-progress: true
 
 jobs:
+    setup:
+        uses: Kryft-Studios/workflows/.github/workflows/setupPnpm.yml@main
+        with:
+            install-deps: true
     buildDocs:
         runs-on: ubuntu-latest
         steps:
-            - uses: ./.github/workflows/setupPnpm.yml
-              with:
-                install-deps: true
             - run: pnpm exec typedoc
             
             - uses: actions/configure-pages@v5
@@ -26,6 +27,7 @@ jobs:
                 path: ./docs
     deploy: 
         environment: 
+            #lwk vscode github extension SCREAMS
             name: "github-pages"
             url: ${{ steps.deployment.outputs.page_url }} 
         runs-on: ubuntu-latest 

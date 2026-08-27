@@ -2,10 +2,11 @@ name: Typecheck Typescript
 on:
     workflow_call:
 jobs:
+    setup:
+        uses: Kryft-Studios/workflows/.github/workflows/setupPnpm.yml@main
+        with:
+            install-deps: true
     typecheck:
         runs-on: ubuntu-latest
         steps:
-            - uses: ./.github/workflows/setupPnpm.yml
-              with:
-                install-deps: true
             - run: pnpm exec tsc

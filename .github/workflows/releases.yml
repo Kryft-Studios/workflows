@@ -1,0 +1,113 @@
+name: GitHub Releases Automation
+
+on:
+  workflow_call:
+    inputs:
+      # Directory to build in
+      buildin:
+        required: true
+        type: string
+
+      # Build command
+      tobuild:
+        required: true
+        type: string
+
+      # Directory whose contents should be released
+      distdir:
+        required: true
+        type: string
+
+      # Version bump: patch, minor, or major
+      bump:
+        required: false
+        type: string
+        default: patch
+
+permissions:
+  contents: write
+
+jobs:
+  setup:
+    uses: Kryft-Studios/workflows/.github/workflows/setupPnpm.yml@main
+    with:
+      install-deps: true
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate bump
+        run: |
+          case "${{ inputs.bump }}" in
+            patch|minor|major)
+              ;;
+            *)
+              echo "Invalid bump type: ${{ inputs.bump }}"
+              exit 1
+              ;;
+          esac
+
+      - name: Bump version
+        run: pnpm version "${{ inputs.bump }}" --no-git-tag-version
+
+      - name: Get version
+        id: version
+        shell: bash
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Releasing v$VERSION"
+
+      - name: Build
+        working-directory: ${{ inputs.buildin }}
+        run: ${{ inputs.tobuild }}
+
+      - name: Verify dist
+        shell: bash
+        run: |
+          if [ ! -d "${{ inputs.distdir }}" ]; then
+            echo "Distribution directory does not exist:"
+            echo "${{ inputs.distdir }}"
+            exit 1
+          fi
+
+          if [ -z "$(find "${{ inputs.distdir }}" -type f -print -quit)" ]; then
+            echo "Distribution directory is empty:"
+            echo "${{ inputs.distdir }}"
+            exit 1
+          fi
+
+      - name: Commit version bump
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add package.json pnpm-lock.yaml
+
+          if git diff --cached --quiet; then
+            echo "No version changes to commit."
+          else
+            git commit -m "chore: release v${{ steps.version.outputs.version }}"
+          fi
+
+      - name: Create tag
+        run: |
+          git tag "v${{ steps.version.outputs.version }}"
+
+      - name: Push release
+        run: |
+          git push origin main
+          git push origin "v${{ steps.version.outputs.version }}"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release create \
+            "v${{ steps.version.outputs.version }}" \
+            ${{ inputs.distdir }}/** \
+            --title "Release v${{ steps.version.outputs.version }}" \
+            --generate-notes \
+            --target "v${{ steps.version.outputs.version }}"
