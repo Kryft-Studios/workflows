@@ -1,0 +1,11 @@
+name: Typecheck Typescript
+on:
+    workflow_call:
+jobs:
+    typecheck:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: ./.github/workflows/setupPnpm.yml
+              with:
+                install-deps: true
+            - run: pnpm exec tsc

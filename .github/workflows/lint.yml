@@ -1,0 +1,11 @@
+name: Linting with JS
+on:
+    workflow_call:
+jobs:
+    lint:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: ./.github/workflows/setupPnpm.yml
+              with:
+                install-deps: true
+            - run: pnpm exec eslint
