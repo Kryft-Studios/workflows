@@ -33,7 +33,7 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - run: pnpm exec typedoc
+      - run: pnpm run docs
             
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
